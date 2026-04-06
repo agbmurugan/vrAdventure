@@ -30,7 +30,7 @@ const AdminDashboard = () => {
   const fetchPackages = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/tours');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tours`);
       if (!res.ok) throw new Error('Failed to fetch packages');
       const data = await res.json();
       setPackages(data);
@@ -58,7 +58,7 @@ const AdminDashboard = () => {
 
     try {
       if (editingId) {
-        const res = await fetch(`http://localhost:5000/api/tours/${editingId}`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tours/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -70,7 +70,7 @@ const AdminDashboard = () => {
         });
         if (!res.ok) throw new Error('Failed to update');
       } else {
-        const res = await fetch('http://localhost:5000/api/tours', {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tours`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -104,7 +104,7 @@ const AdminDashboard = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this package?")) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/tours/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tours/${id}`, {
         method: 'DELETE'
       });
       if (!res.ok) throw new Error('Failed to delete');

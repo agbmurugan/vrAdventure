@@ -14,7 +14,7 @@ export default function BookingPlatform() {
     useEffect(() => {
         const fetchTours = async () => {
             try {
-                const response = await fetch('http://localhost:5000/api/tours');
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/tours`);
                 if (!response.ok) throw new Error('Failed to fetch tours');
                 const data = await response.json();
                 setPackages(data);
