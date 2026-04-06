@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDuckDB } from '../hooks/useDuckDB';
-import { initTables } from '../services/DuckDBService';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { connection, loading, error } = useDuckDB();
   const [packages, setPackages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   // Form State
   const [editingId, setEditingId] = useState(null);
@@ -25,28 +24,22 @@ const AdminDashboard = () => {
   }, [navigate]);
 
   useEffect(() => {
-    if (!connection) return;
-
-    const initDB = async () => {
-      try {
-        await initTables();
-        fetchPackages();
-      } catch (err) {
-        console.error('Error init DB:', err);
-      }
-    };
-    initDB();
-  }, [connection]);
+    fetchPackages();
+  }, []);
 
   const fetchPackages = async () => {
-    if (!connection) return;
+    setLoading(true);
     try {
-      const res = await connection.query('SELECT * FROM tour_packages ORDER BY id DESC');
-      const data = res.toArray().map(r => r.toJSON());
+      const res = await fetch('http://localhost:5000/api/tours');
+      if (!res.ok) throw new Error('Failed to fetch packages');
+      const data = await res.json();
       setPackages(data);
-      localStorage.setItem('tour_packages_db', JSON.stringify(data));
+      setError(null);
     } catch (e) {
       console.error('Failed to fetch packages:', e);
+      setError(e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,9 +49,8 @@ const AdminDashboard = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!connection) return;
     
-    // Extracted Validation
+    // Validation
     if (!formData.title || !formData.description || formData.price === '' || formData.duration === '') {
       alert("All fields are required!");
       return;
@@ -66,24 +58,29 @@ const AdminDashboard = () => {
 
     try {
       if (editingId) {
-        await connection.query(`
-          UPDATE tour_packages 
-          SET title = '${formData.title.replace(/'/g, "''")}', 
-              description = '${formData.description.replace(/'/g, "''")}', 
-              price = ${Number(formData.price)}, 
-              duration = ${Number(formData.duration)}
-          WHERE id = ${editingId}
-        `);
+        const res = await fetch(`http://localhost:5000/api/tours/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: formData.title,
+            description: formData.description,
+            price: Number(formData.price),
+            duration: Number(formData.duration)
+          })
+        });
+        if (!res.ok) throw new Error('Failed to update');
       } else {
-        await connection.query(`
-          INSERT INTO tour_packages (title, description, price, duration) 
-          VALUES (
-            '${formData.title.replace(/'/g, "''")}', 
-            '${formData.description.replace(/'/g, "''")}', 
-            ${Number(formData.price)}, 
-            ${Number(formData.duration)}
-          )
-        `);
+        const res = await fetch('http://localhost:5000/api/tours', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: formData.title,
+            description: formData.description,
+            price: Number(formData.price),
+            duration: Number(formData.duration)
+          })
+        });
+        if (!res.ok) throw new Error('Failed to create');
       }
       setFormData({ title: '', description: '', price: '', duration: '' });
       setEditingId(null);
@@ -107,10 +104,14 @@ const AdminDashboard = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this package?")) return;
     try {
-      await connection.query(`DELETE FROM tour_packages WHERE id = ${id}`);
+      const res = await fetch(`http://localhost:5000/api/tours/${id}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) throw new Error('Failed to delete');
       fetchPackages();
     } catch (err) {
       console.error(err);
+      alert("Error deleting package");
     }
   };
 
@@ -120,7 +121,7 @@ const AdminDashboard = () => {
     navigate('/login');
   };
 
-  if (loading) return <div className="container" style={{ textAlign: 'center', marginTop: '20vh' }}><h3>Starting DuckDB Engine...</h3></div>;
+  if (loading && packages.length === 0) return <div className="container" style={{ textAlign: 'center', marginTop: '20vh' }}><h3>Loading Dashboard...</h3></div>;
   if (error) return <div className="container" style={{ color: '#ef4444', textAlign: 'center' }}><h3>System Error: {error.message}</h3></div>;
 
   return (

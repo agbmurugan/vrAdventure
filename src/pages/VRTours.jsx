@@ -1,33 +1,35 @@
 import React, { useState, useEffect } from 'react'
 import { Navigation, Maximize2 } from 'lucide-react'
-import { useDuckDB } from '../hooks/useDuckDB'
-import { initTables } from '../services/DuckDBService'
 
 export default function VRTours() {
     const [activeTour, setActiveTour] = useState(null)
-    const { connection, loading, error } = useDuckDB()
     const [tours, setTours] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
 
     useEffect(() => {
-        if (!connection) return;
-
-        const initDB = async () => {
+        const fetchTours = async () => {
             try {
-                await initTables();
-
-                const toursRes = await connection.query('SELECT * FROM tour_packages ORDER BY id DESC');
-                setTours(toursRes.toArray().map(r => r.toJSON()));
+                const response = await fetch('http://localhost:5000/api/tours');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                setTours(data);
+                setLoading(false);
             } catch (err) {
-                console.error("Failed to fetch tours from DuckDB:", err);
+                console.error("Failed to fetch tours from API:", err);
+                setError(err);
+                setLoading(false);
             }
         };
 
-        initDB();
-    }, [connection]);
+        fetchTours();
+    }, []);
 
     const defaultImage = 'https://images.unsplash.com/photo-1502008479536-ee1b321420d9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
 
-    if (loading) return <div className="container" style={{ textAlign: 'center', marginTop: '20vh' }}><h3>Starting VR Environment...</h3></div>;
+    if (loading) return <div className="container" style={{ textAlign: 'center', marginTop: '20vh' }}><h3>Loading VR Environments...</h3></div>;
     if (error) return <div className="container" style={{ color: '#ef4444', textAlign: 'center' }}><h3>System Error: {error.message}</h3></div>;
 
     return (

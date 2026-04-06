@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { ShieldCheck, TrendingDown, Clock, CheckCircle } from 'lucide-react'
-import { useDuckDB } from '../hooks/useDuckDB'
-import { initTables } from '../services/DuckDBService'
 
 export default function BookingPlatform() {
-    const { connection, loading, error } = useDuckDB()
     const [packages, setPackages] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
     const [activePackage, setActivePackage] = useState(null)
     const [pricing, setPricing] = useState({ base: 0, current: 0, discount: 0 })
     const [isBooking, setIsBooking] = useState(false)
@@ -13,18 +12,21 @@ export default function BookingPlatform() {
 
     // Load available packages
     useEffect(() => {
-        if (!connection) return;
-        const loadDB = async () => {
+        const fetchTours = async () => {
             try {
-                await initTables();
-                const res = await connection.query('SELECT * FROM tour_packages ORDER BY id DESC');
-                setPackages(res.toArray().map(r => r.toJSON()));
+                const response = await fetch('http://localhost:5000/api/tours');
+                if (!response.ok) throw new Error('Failed to fetch tours');
+                const data = await response.json();
+                setPackages(data);
+                setLoading(false);
             } catch (err) {
-                console.error(err);
+                console.error("API Error:", err);
+                setError(err);
+                setLoading(false);
             }
         };
-        loadDB();
-    }, [connection]);
+        fetchTours();
+    }, []);
 
     // Simulate Dynamic Pricing relative to the active package
     useEffect(() => {
@@ -53,7 +55,7 @@ export default function BookingPlatform() {
         }, 2500)
     }
 
-    if (loading) return <div className="container" style={{ textAlign: 'center', marginTop: '20vh' }}><h3>Starting Booking Engine...</h3></div>;
+    if (loading) return <div className="container" style={{ textAlign: 'center', marginTop: '20vh' }}><h3>Loading Booking Engine...</h3></div>;
     if (error) return <div className="container" style={{ color: '#ef4444', textAlign: 'center' }}><h3>System Error: {error.message}</h3></div>;
 
     return (
