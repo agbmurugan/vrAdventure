@@ -13,6 +13,7 @@ const Signup = () => {
   const [verificationCode, setVerificationCode] = useState('');
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
+  const [mailWarning, setMailWarning] = useState('');
   const [loading, setLoading] = useState(false);
   
   const navigate = useNavigate();
@@ -36,6 +37,7 @@ const Signup = () => {
       if (!res.ok) throw new Error(data.error || 'Failed to sign up');
       
       setMsg(data.message);
+      if (data.mail_warning) setMailWarning(data.mail_warning);
       setStep(2); // move to verification
     } catch (err) {
       setError(err.message);
@@ -86,6 +88,12 @@ const Signup = () => {
           
           {error && <div style={{ color: '#ef4444', marginBottom: '1rem', textAlign: 'center', background: 'rgba(239, 68, 68, 0.1)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)' }}>{error}</div>}
           {msg && <div style={{ color: '#10b981', marginBottom: '1rem', textAlign: 'center', background: 'rgba(16, 185, 129, 0.1)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.2)' }}>{msg}</div>}
+          {mailWarning && (
+            <div style={{ marginBottom: '1rem', background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: '8px', padding: '0.75rem' }}>
+              <div style={{ color: '#facc15', fontWeight: 'bold', marginBottom: '0.3rem', fontSize: '0.85rem' }}>⚠️ Email delivery issue</div>
+              <div style={{ color: '#fde047', fontSize: '0.8rem', wordBreak: 'break-word' }}>{mailWarning}</div>
+            </div>
+          )}
           
           {step === 1 && (
             <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

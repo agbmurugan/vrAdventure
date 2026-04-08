@@ -9,7 +9,7 @@ const AdminDashboard = () => {
   const [packages, setPackages] = useState([]);
   const [loadingTours, setLoadingTours] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ title: '', description: '', price: '', duration: '' });
+  const [formData, setFormData] = useState({ title: '', description: '', price: '', duration: '', image_url: '' });
 
   // Users State
   const [users, setUsers] = useState([]);
@@ -65,7 +65,7 @@ const AdminDashboard = () => {
         body: JSON.stringify({ ...formData, price: Number(formData.price), duration: Number(formData.duration) })
       });
       if (!res.ok) throw new Error('Failed to save');
-      setFormData({ title: '', description: '', price: '', duration: '' });
+      setFormData({ title: '', description: '', price: '', duration: '', image_url: '' });
       setEditingId(null);
       fetchPackages();
     } catch (err) {
@@ -74,7 +74,7 @@ const AdminDashboard = () => {
   };
 
   const handleEditPackage = (pkg) => {
-    setFormData({ title: pkg.title, description: pkg.description, price: pkg.price.toString(), duration: pkg.duration.toString() });
+    setFormData({ title: pkg.title, description: pkg.description, price: pkg.price.toString(), duration: pkg.duration.toString(), image_url: pkg.image_url || '' });
     setEditingId(pkg.id);
   };
 
@@ -185,9 +185,18 @@ const AdminDashboard = () => {
                   <input type="number" name="duration" className="form-input" value={formData.duration} onChange={handleInputChange} required />
                 </div>
               </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Image URL <span style={{color:'var(--text-muted)',fontWeight:'normal'}}>(optional)</span></label>
+                <input type="url" name="image_url" className="form-input" value={formData.image_url} onChange={handleInputChange} placeholder="https://images.unsplash.com/..." />
+                {formData.image_url && (
+                  <div style={{ marginTop: '0.5rem', borderRadius: '8px', overflow: 'hidden', height: '80px' }}>
+                    <img src={formData.image_url} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display='none'} />
+                  </div>
+                )}
+              </div>
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>{editingId ? 'Save Changes' : 'Create Package'}</button>
-                {editingId && <button type="button" className="btn btn-outline" onClick={() => { setEditingId(null); setFormData({title: '', description: '', price: '', duration: ''}); }}>Cancel</button>}
+                {editingId && <button type="button" className="btn btn-outline" onClick={() => { setEditingId(null); setFormData({title: '', description: '', price: '', duration: '', image_url: ''}); }}>Cancel</button>}
               </div>
             </form>
           </div>
