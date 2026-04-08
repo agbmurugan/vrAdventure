@@ -5,6 +5,8 @@ import Home from './pages/Home'
 import VRTours from './pages/VRTours'
 import BookingPlatform from './pages/BookingPlatform'
 import Login from './pages/Login'
+import Signup from './pages/Signup'
+import ForgotPassword from './pages/ForgotPassword'
 import AdminDashboard from './pages/AdminDashboard'
 import './index.css'
 
@@ -50,6 +52,8 @@ function AppContent() {
       <main className={role ? "main-content" : "main-content-login"}>
         <Routes>
           <Route path="/login" element={!role ? <Login /> : <Navigate to="/" replace />} />
+          <Route path="/signup" element={!role ? <Signup /> : <Navigate to="/" replace />} />
+          <Route path="/forgot-password" element={!role ? <ForgotPassword /> : <Navigate to="/" replace />} />
           
           {role ? (
             <>
