@@ -30,11 +30,14 @@ const pool = new Pool({
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    pool: true, // Use connection pooling for better performance
+    port: 587,
+    secure: false, // Port 587 uses STARTTLS
+    pool: true,
     maxConnections: 5,
     maxMessages: 100,
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
@@ -256,6 +259,18 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT NOW()
             );
         `);
+
+        // Migration: Ensure all columns exist in tbl_bookings (for older database versions)
+        const bookingColumns = [
+            { name: 'user_name', type: 'VARCHAR(255) NOT NULL DEFAULT \'Guest\'' },
+            { name: 'user_email', type: 'VARCHAR(255) NOT NULL DEFAULT \'no-reply@example.com\'' },
+            { name: 'user_phone', type: 'VARCHAR(50)' },
+            { name: 'tour_title', type: 'VARCHAR(255) NOT NULL DEFAULT \'Trip\'' }
+        ];
+
+        for (const col of bookingColumns) {
+            await pool.query(`ALTER TABLE tbl_bookings ADD COLUMN IF NOT EXISTS ${col.name} ${col.type};`);
+        }
 
         const resTours = await pool.query("SELECT COUNT(*) FROM tour_packages;");
         if (parseInt(resTours.rows[0].count, 10) === 0) {
