@@ -15,7 +15,11 @@ dns.setDefaultResultOrder('ipv4first');
 const { Pool } = pkg;
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: ["https://vr-adventure.vercel.app", "http://localhost:5173", "http://localhost:5174"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"]
+}));
 app.use(express.json());
 
 const pool = new Pool({
@@ -612,7 +616,7 @@ app.post('/api/auth/verify', async (req, res) => {
     try {
         const user = await pool.query("SELECT * FROM tbl_users WHERE email = $1", [email]);
         if (user.rows.length === 0) return res.status(404).json({ error: 'User not found' });
-        
+
         if (user.rows[0].verification_code === code) {
             await pool.query("UPDATE tbl_users SET is_verified = true, verification_code = null WHERE email = $1", [email]);
             return res.json({ message: 'Email verified successfully' });
