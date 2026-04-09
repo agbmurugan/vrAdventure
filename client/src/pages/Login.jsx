@@ -30,7 +30,9 @@ const Login = () => {
       }
       
       localStorage.setItem('userRole', data.role);
-      localStorage.setItem('token', data.token); // Store token
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('userName', data.name || '');
+      localStorage.setItem('userEmail', data.email || '');
       window.dispatchEvent(new Event('auth-change'));
       
       if (data.role === 'admin') navigate('/admin');

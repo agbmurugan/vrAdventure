@@ -47,7 +47,153 @@ transporter.verify((error, success) => {
     }
 });
 
-// Database Initialization
+// ─── JWT Auth Middleware ─────────────────────────────────────────────────────
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'No token provided' });
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+        req.user = decoded;
+        next();
+    } catch (err) {
+        return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+};
+
+// ─── Email Templates ─────────────────────────────────────────────────────────
+const sendUserBookingConfirmation = async (userEmail, userName, tourTitle, tourDate, price, bookingId) => {
+    const formatted = new Date(tourDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    await transporter.sendMail({
+        from: `"vrAdventure" <${process.env.EMAIL_USER}>`,
+        to: userEmail,
+        subject: `🎉 Booking Confirmed — ${tourTitle} | vrAdventure`,
+        text: `Hi ${userName}, your booking for ${tourTitle} on ${formatted} has been confirmed! Booking ID: #${bookingId}`,
+        html: `
+        <div style="font-family:'Segoe UI',Arial,sans-serif;background:#0f0f1a;color:#e2e8f0;padding:40px 20px;min-height:100vh">
+          <div style="max-width:520px;margin:0 auto;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden">
+            <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6,#ec4899);padding:36px;text-align:center">
+              <div style="font-size:3rem;margin-bottom:8px">✈️</div>
+              <h1 style="margin:0;font-size:1.8rem;color:#fff;letter-spacing:-0.5px">Booking Confirmed!</h1>
+              <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:0.95rem">vrAdventure — Your Journey Awaits</p>
+            </div>
+            <div style="padding:32px">
+              <p style="margin:0 0 20px;color:#94a3b8;line-height:1.7;font-size:1rem">Hi <strong style="color:#e2e8f0">${userName}</strong>,<br/>
+              We're thrilled to confirm your VR adventure booking! Get ready for an incredible experience. 🌍</p>
+
+              <div style="background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.1));border:1px solid rgba(99,102,241,0.3);border-radius:12px;padding:24px;margin-bottom:24px">
+                <h2 style="margin:0 0 16px;font-size:1.2rem;color:#a5b4fc;border-bottom:1px solid rgba(99,102,241,0.2);padding-bottom:10px">📋 Booking Details</h2>
+                <table style="width:100%;border-collapse:collapse">
+                  <tr>
+                    <td style="padding:8px 0;color:#64748b;font-size:0.9rem">Booking ID</td>
+                    <td style="padding:8px 0;color:#e2e8f0;font-weight:bold;text-align:right">#${bookingId}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 0;color:#64748b;font-size:0.9rem">Tour Package</td>
+                    <td style="padding:8px 0;color:#a5b4fc;font-weight:bold;text-align:right">${tourTitle}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 0;color:#64748b;font-size:0.9rem">Travel Date</td>
+                    <td style="padding:8px 0;color:#e2e8f0;font-weight:bold;text-align:right">📅 ${formatted}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 0;color:#64748b;font-size:0.9rem">Amount Paid</td>
+                    <td style="padding:8px 0;color:#34d399;font-weight:bold;text-align:right;font-size:1.1rem">$${price}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 0;color:#64748b;font-size:0.9rem">Status</td>
+                    <td style="padding:8px 0;text-align:right"><span style="background:rgba(52,211,153,0.15);color:#34d399;padding:3px 10px;border-radius:20px;font-size:0.85rem">✓ Confirmed</span></td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:16px;margin-bottom:24px">
+                <p style="margin:0;color:#fbbf24;font-size:0.9rem">⏰ <strong>Reminder:</strong> Be ready on your travel date! Log in to vrAdventure to manage your bookings and view your complete itinerary.</p>
+              </div>
+
+              <p style="margin:0;color:#64748b;font-size:0.85rem;line-height:1.6">If you have any questions, please contact our support team. We're here to make your adventure unforgettable!</p>
+            </div>
+            <div style="background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.07);padding:16px;text-align:center">
+              <p style="margin:0;color:#475569;font-size:0.8rem">© 2025 vrAdventure · Built with ❤️ for explorers</p>
+            </div>
+          </div>
+        </div>`
+    });
+};
+
+const sendAdminBookingNotification = async (adminEmail, userName, userEmail, userPhone, tourTitle, tourDate, price, bookingId) => {
+    const formatted = new Date(tourDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    await transporter.sendMail({
+        from: `"vrAdventure System" <${process.env.EMAIL_USER}>`,
+        to: adminEmail,
+        subject: `🔔 New Booking Alert — ${tourTitle} by ${userName}`,
+        text: `New booking from ${userName} (${userEmail}) for ${tourTitle} on ${formatted}. Booking ID: #${bookingId}`,
+        html: `
+        <div style="font-family:'Segoe UI',Arial,sans-serif;background:#0f0f1a;color:#e2e8f0;padding:40px 20px;min-height:100vh">
+          <div style="max-width:520px;margin:0 auto;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden">
+            <div style="background:linear-gradient(135deg,#f97316,#ef4444);padding:36px;text-align:center">
+              <div style="font-size:3rem;margin-bottom:8px">🔔</div>
+              <h1 style="margin:0;font-size:1.8rem;color:#fff;letter-spacing:-0.5px">New Booking Alert</h1>
+              <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:0.95rem">vrAdventure Admin Notification</p>
+            </div>
+            <div style="padding:32px">
+              <p style="margin:0 0 20px;color:#94a3b8;line-height:1.7;font-size:1rem">A new booking has been made on the vrAdventure platform. Here are the complete details:</p>
+
+              <div style="background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.25);border-radius:12px;padding:24px;margin-bottom:20px">
+                <h2 style="margin:0 0 14px;font-size:1.1rem;color:#fb923c;border-bottom:1px solid rgba(249,115,22,0.2);padding-bottom:10px">👤 Customer Details</h2>
+                <table style="width:100%;border-collapse:collapse">
+                  <tr>
+                    <td style="padding:7px 0;color:#64748b;font-size:0.9rem">Name</td>
+                    <td style="padding:7px 0;color:#e2e8f0;font-weight:bold;text-align:right">${userName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#64748b;font-size:0.9rem">Email</td>
+                    <td style="padding:7px 0;color:#fb923c;text-align:right">${userEmail}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#64748b;font-size:0.9rem">Phone</td>
+                    <td style="padding:7px 0;color:#e2e8f0;text-align:right">${userPhone || 'N/A'}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:12px;padding:24px;margin-bottom:20px">
+                <h2 style="margin:0 0 14px;font-size:1.1rem;color:#a5b4fc;border-bottom:1px solid rgba(99,102,241,0.2);padding-bottom:10px">📦 Booking Details</h2>
+                <table style="width:100%;border-collapse:collapse">
+                  <tr>
+                    <td style="padding:7px 0;color:#64748b;font-size:0.9rem">Booking ID</td>
+                    <td style="padding:7px 0;color:#e2e8f0;font-weight:bold;text-align:right">#${bookingId}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#64748b;font-size:0.9rem">Tour Package</td>
+                    <td style="padding:7px 0;color:#a5b4fc;font-weight:bold;text-align:right">${tourTitle}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#64748b;font-size:0.9rem">Travel Date</td>
+                    <td style="padding:7px 0;color:#e2e8f0;font-weight:bold;text-align:right">📅 ${formatted}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#64748b;font-size:0.9rem">Amount</td>
+                    <td style="padding:7px 0;color:#34d399;font-weight:bold;text-align:right;font-size:1.1rem">$${price}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#64748b;font-size:0.9rem">Booked On</td>
+                    <td style="padding:7px 0;color:#e2e8f0;text-align:right">${new Date().toLocaleString()}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <p style="margin:0;color:#64748b;font-size:0.85rem;line-height:1.6">Login to the Admin Dashboard to manage this booking and view all bookings.</p>
+            </div>
+            <div style="background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.07);padding:16px;text-align:center">
+              <p style="margin:0;color:#475569;font-size:0.8rem">© 2025 vrAdventure Admin System</p>
+            </div>
+          </div>
+        </div>`
+    });
+};
+
+// ─── Database Initialization ──────────────────────────────────────────────────
 const initDB = async () => {
     try {
         await pool.query(`
@@ -61,7 +207,6 @@ const initDB = async () => {
             );
         `);
 
-        // Add image_url column if it doesn't exist (for existing databases)
         await pool.query(`
             ALTER TABLE tour_packages ADD COLUMN IF NOT EXISTS image_url TEXT;
         `);
@@ -83,6 +228,23 @@ const initDB = async () => {
             );
         `);
 
+        // Create bookings table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS tbl_bookings (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES tbl_users(id) ON DELETE SET NULL,
+                tour_id INTEGER REFERENCES tour_packages(id) ON DELETE SET NULL,
+                user_name VARCHAR(255) NOT NULL,
+                user_email VARCHAR(255) NOT NULL,
+                user_phone VARCHAR(50),
+                tour_title VARCHAR(255) NOT NULL,
+                tour_date DATE NOT NULL,
+                price_paid DOUBLE PRECISION NOT NULL,
+                status VARCHAR(50) DEFAULT 'upcoming',
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
         const resTours = await pool.query("SELECT COUNT(*) FROM tour_packages;");
         if (parseInt(resTours.rows[0].count, 10) === 0) {
             await pool.query(`
@@ -93,7 +255,6 @@ const initDB = async () => {
             `);
             console.log("Seeded tour_packages with default data.");
         } else {
-            // Update existing tours with images if image_url is still null
             await pool.query(`
                 UPDATE tour_packages SET image_url = 'https://images.unsplash.com/photo-1483683804023-6ccdb62f86ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
                 WHERE image_url IS NULL AND title ILIKE '%Bora Bora%';
@@ -129,7 +290,7 @@ const initDB = async () => {
 
 initDB();
 
-// API ROUTES FOR TOUR PACKAGES
+// ─── TOUR PACKAGE ROUTES ──────────────────────────────────────────────────────
 app.get("/api/tours", async (req, res) => {
     try {
         const result = await pool.query("SELECT * FROM tour_packages ORDER BY id DESC");
@@ -183,7 +344,162 @@ app.delete("/api/tours/:id", async (req, res) => {
 });
 
 
-// AUTH ROUTES
+// ─── BOOKING ROUTES ───────────────────────────────────────────────────────────
+
+// POST /api/bookings — Create a booking (requires auth)
+app.post('/api/bookings', authenticateToken, async (req, res) => {
+    const { tour_id, tour_date, price_paid } = req.body;
+    const { id: user_id, name: user_name, email: user_email } = req.user;
+
+    if (!tour_id || !tour_date || !price_paid) {
+        return res.status(400).json({ error: 'tour_id, tour_date, and price_paid are required' });
+    }
+
+    try {
+        // Get tour details
+        const tourResult = await pool.query("SELECT * FROM tour_packages WHERE id = $1", [tour_id]);
+        if (tourResult.rows.length === 0) return res.status(404).json({ error: 'Tour not found' });
+        const tour = tourResult.rows[0];
+
+        // Get user's phone
+        const userResult = await pool.query("SELECT phone FROM tbl_users WHERE id = $1", [user_id]);
+        const user_phone = userResult.rows[0]?.phone || null;
+
+        // Insert booking
+        const bookingResult = await pool.query(
+            `INSERT INTO tbl_bookings (user_id, tour_id, user_name, user_email, user_phone, tour_title, tour_date, price_paid, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'upcoming') RETURNING *`,
+            [user_id, tour_id, user_name, user_email, user_phone, tour.title, tour_date, price_paid]
+        );
+        const booking = bookingResult.rows[0];
+
+        // Auto-update status to 'completed' if tour date is in the past
+        await pool.query(`
+            UPDATE tbl_bookings SET status = 'completed'
+            WHERE status = 'upcoming' AND tour_date < CURRENT_DATE
+        `);
+
+        // Send user confirmation email
+        try {
+            await sendUserBookingConfirmation(user_email, user_name, tour.title, tour_date, price_paid, booking.id);
+            console.log(`✅ Booking confirmation email sent to ${user_email}`);
+        } catch (mailErr) {
+            console.error('User booking email failed:', mailErr.message);
+        }
+
+        // Send admin notification email
+        try {
+            const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
+            await sendAdminBookingNotification(adminEmail, user_name, user_email, user_phone, tour.title, tour_date, price_paid, booking.id);
+            console.log(`✅ Admin notification email sent to ${adminEmail}`);
+        } catch (mailErr) {
+            console.error('Admin notification email failed:', mailErr.message);
+        }
+
+        res.status(201).json({
+            message: 'Booking confirmed! A confirmation email has been sent to your email address.',
+            booking
+        });
+    } catch (err) {
+        console.error('Booking error:', err);
+        res.status(500).json({ error: 'Failed to create booking' });
+    }
+});
+
+// GET /api/bookings/my — Get current user's bookings (requires auth)
+app.get('/api/bookings/my', authenticateToken, async (req, res) => {
+    try {
+        // Auto-update expired upcoming bookings to completed
+        await pool.query(`
+            UPDATE tbl_bookings SET status = 'completed'
+            WHERE status = 'upcoming' AND tour_date < CURRENT_DATE
+        `);
+
+        const result = await pool.query(
+            `SELECT b.*, tp.image_url, tp.duration
+             FROM tbl_bookings b
+             LEFT JOIN tour_packages tp ON b.tour_id = tp.id
+             WHERE b.user_id = $1
+             ORDER BY b.tour_date DESC`,
+            [req.user.id]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch bookings' });
+    }
+});
+
+// GET /api/bookings — Admin: get all bookings
+app.get('/api/bookings', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    try {
+        // Auto-update expired upcoming bookings to completed
+        await pool.query(`
+            UPDATE tbl_bookings SET status = 'completed'
+            WHERE status = 'upcoming' AND tour_date < CURRENT_DATE
+        `);
+
+        const result = await pool.query(
+            `SELECT b.*, tp.image_url, tp.duration
+             FROM tbl_bookings b
+             LEFT JOIN tour_packages tp ON b.tour_id = tp.id
+             ORDER BY b.created_at DESC`
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch all bookings' });
+    }
+});
+
+// GET /api/bookings/stats — Admin: booking stats
+app.get('/api/bookings/stats', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    try {
+        const total = await pool.query("SELECT COUNT(*) FROM tbl_bookings");
+        const upcoming = await pool.query("SELECT COUNT(*) FROM tbl_bookings WHERE status = 'upcoming'");
+        const completed = await pool.query("SELECT COUNT(*) FROM tbl_bookings WHERE status = 'completed'");
+        const revenue = await pool.query("SELECT SUM(price_paid) FROM tbl_bookings");
+        const recent = await pool.query(
+            "SELECT COUNT(*) FROM tbl_bookings WHERE created_at > NOW() - INTERVAL '24 hours'"
+        );
+        res.json({
+            total: parseInt(total.rows[0].count),
+            upcoming: parseInt(upcoming.rows[0].count),
+            completed: parseInt(completed.rows[0].count),
+            revenue: parseFloat(revenue.rows[0].sum || 0).toFixed(2),
+            recent24h: parseInt(recent.rows[0].count)
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch stats' });
+    }
+});
+
+// PUT /api/bookings/:id/status — Update booking status (admin)
+app.put('/api/bookings/:id/status', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const { id } = req.params;
+    const { status } = req.body;
+    if (!['upcoming', 'completed', 'cancelled'].includes(status)) {
+        return res.status(400).json({ error: 'Invalid status' });
+    }
+    try {
+        const result = await pool.query(
+            "UPDATE tbl_bookings SET status = $1 WHERE id = $2 RETURNING *",
+            [status, id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Booking not found' });
+        res.json({ message: 'Booking status updated', booking: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to update booking status' });
+    }
+});
+
+
+// ─── AUTH ROUTES ──────────────────────────────────────────────────────────────
 app.post('/api/auth/signup', async (req, res) => {
     const { name, email, password, phone, address } = req.body;
     try {
@@ -194,18 +510,15 @@ app.post('/api/auth/signup', async (req, res) => {
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Check if email already exists
         const byEmail = await pool.query("SELECT * FROM tbl_users WHERE email = $1", [email]);
 
         if (byEmail.rows.length > 0) {
             const existingUser = byEmail.rows[0];
 
-            // Already verified → block
             if (existingUser.is_verified) {
                 return res.status(409).json({ error: 'This email is already registered and verified. Please login.' });
             }
 
-            // Not verified → check if the phone is taken by a DIFFERENT verified user
             const phoneConflict = await pool.query(
                 "SELECT * FROM tbl_users WHERE phone = $1 AND email != $2 AND is_verified = true",
                 [phone, email]
@@ -214,7 +527,6 @@ app.post('/api/auth/signup', async (req, res) => {
                 return res.status(409).json({ error: 'This phone number is already in use by another account.' });
             }
 
-            // Update the unverified account with new details + fresh code
             await pool.query(
                 `UPDATE tbl_users 
                  SET name = $1, password = $2, phone = $3, address = $4, verification_code = $5
@@ -224,7 +536,6 @@ app.post('/api/auth/signup', async (req, res) => {
             console.log(`Updated unverified user: ${email} — new code issued.`);
 
         } else {
-            // Phone check: is phone taken by any verified user?
             const phoneCheck = await pool.query(
                 "SELECT * FROM tbl_users WHERE phone = $1 AND is_verified = true",
                 [phone]
@@ -233,20 +544,17 @@ app.post('/api/auth/signup', async (req, res) => {
                 return res.status(409).json({ error: 'This phone number is already in use.' });
             }
 
-            // Brand new user — also clean up any old unverified record with same phone
             await pool.query(
                 "DELETE FROM tbl_users WHERE phone = $1 AND is_verified = false",
                 [phone]
             );
 
-            // Insert fresh
             await pool.query(
                 "INSERT INTO tbl_users (name, email, password, phone, address, verification_code) VALUES ($1, $2, $3, $4, $5, $6)",
                 [name, email, hashedPassword, phone, address, verificationCode]
             );
         }
 
-        // Send Email
         try {
             await transporter.sendMail({
                 from: `"vrAdventure" <${process.env.EMAIL_USER}>`,
@@ -278,7 +586,6 @@ app.post('/api/auth/signup', async (req, res) => {
             console.log("Verification email sent to:", email);
         } catch (mailErr) {
             console.error("Mail could not be sent:", mailErr.code, mailErr.message);
-            // Still succeed user creation but warn client mail failed
             return res.status(201).json({
                 message: 'User created successfully. Please verify your email.',
                 mail_warning: `Email delivery failed: ${mailErr.code || ''} ${mailErr.message}. Check Railway env vars EMAIL_USER and EMAIL_PASS.`
@@ -312,7 +619,6 @@ app.post('/api/auth/verify', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
     try {
-        // We also check username here to allow backward compatibility for 'admin'/'user' if needed
         const result = await pool.query("SELECT * FROM tbl_users WHERE email = $1 OR name = $1", [email]);
         if (result.rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
 
@@ -335,7 +641,13 @@ app.post('/api/auth/login', async (req, res) => {
             { expiresIn: '1d' }
         );
 
-        res.json({ message: 'Logged in successfully', token, role: user.role });
+        res.json({
+            message: 'Logged in successfully',
+            token,
+            role: user.role,
+            name: user.name,
+            email: user.email
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error during login' });
@@ -349,7 +661,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         if (user.rows.length === 0) return res.status(404).json({ error: 'User not found' });
 
         const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const expires = new Date(Date.now() + 15 * 60000); // 15 minutes from now
+        const expires = new Date(Date.now() + 15 * 60000);
 
         await pool.query("UPDATE tbl_users SET reset_code = $1, reset_code_expires = $2 WHERE email = $3", [resetCode, expires, email]);
 
@@ -413,9 +725,8 @@ app.post('/api/auth/reset-password', async (req, res) => {
     }
 });
 
-// ADMIN ROUTES (User Management)
+// ─── ADMIN ROUTES (User Management) ──────────────────────────────────────────
 app.get('/api/users', async (req, res) => {
-    // In production, you would add a middleware to check JWT & that role === 'admin'
     try {
         const result = await pool.query("SELECT id, name, email, phone, address, role, status, is_verified FROM tbl_users ORDER BY id DESC");
         res.json(result.rows);
@@ -441,8 +752,7 @@ app.put('/api/users/:id/status', async (req, res) => {
     }
 });
 
-// ─── DEBUG: Test Email Route ─────────────────────────────────────────────────
-// Visit: GET /api/test-email?to=youremail@gmail.com
+// ─── DEBUG: Test Email Route ───────────────────────────────────────────────────
 app.get('/api/test-email', async (req, res) => {
     const to = req.query.to || process.env.EMAIL_USER;
     if (!to) return res.status(400).json({ error: 'Provide ?to=email in query' });
