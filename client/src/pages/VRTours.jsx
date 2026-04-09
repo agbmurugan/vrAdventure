@@ -108,7 +108,7 @@ export default function VRTours() {
                                 <h3 style={{ fontSize: '1.1rem', marginBottom: '0.4rem', color: 'var(--text-main)', lineHeight: 1.3 }}>{tour.title}</h3>
                                 <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1rem', minHeight: '40px', lineHeight: 1.5 }}>{tour.description}</p>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span className="text-gradient" style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>${Number(tour.price).toFixed(2)}</span>
+                                    <span className="text-gradient" style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>₹{Number(tour.price).toLocaleString('en-IN')}</span>
                                     <button className="btn btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={() => setActiveTour(tour)}>
                                         <Navigation size={15} /> Enter VR
                                     </button>

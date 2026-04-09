@@ -219,7 +219,7 @@ export default function BookingPlatform() {
                       )}
                       <div style={{ flex: 1 }}>
                         <h3 style={{ fontSize: '1.1rem', color: 'var(--text-main)', marginBottom: '0.2rem' }}>{pkg.title}</h3>
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{pkg.duration} mins · <span style={{ color: '#34d399', fontWeight: '600' }}>${pkg.price}</span></p>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{pkg.duration} mins · <span style={{ color: '#34d399', fontWeight: '600' }}>₹{Number(pkg.price).toLocaleString('en-IN')}</span></p>
                       </div>
                       <button className="btn btn-primary" style={{ padding: '0.5rem 1.25rem' }} onClick={() => setActivePackage(pkg)}>Select</button>
                     </div>
@@ -247,7 +247,7 @@ export default function BookingPlatform() {
                     <span className="text-muted" style={{ fontSize: '0.8rem' }}>~3s refresh</span>
                   </div>
                   <div style={{ fontSize: '2.5rem', fontWeight: '800', fontFamily: 'monospace', color: 'var(--secondary)' }}>
-                    ${pricing.current} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>USDC</span>
+                    ₹{pricing.current.toLocaleString('en-IN')} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>INR</span>
                   </div>
                   {pricing.discount > 0 ? (
                     <div style={{ color: 'var(--secondary)', fontSize: '0.85rem', marginTop: '0.5rem' }}>↓ {pricing.discount}% demand discount</div>
@@ -304,7 +304,7 @@ export default function BookingPlatform() {
                 {isBooking ? (
                   <><Clock className="icon-pulse" size={20} /> Confirming Booking...</>
                 ) : (
-                  `✈️ Confirm Booking — $${pricing.current}`
+                  `✈️ Confirm Booking - ₹${pricing.current.toLocaleString('en-IN')}`
                 )}
               </button>
               <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '0.75rem' }}>
@@ -400,7 +400,7 @@ function BookingCard({ booking }) {
         <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', marginTop: '0.4rem' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Calendar size={13} /> {travelDate}</span>
           {booking.duration && <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Clock size={13} /> {booking.duration} mins</span>}
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#34d399', fontWeight: '600' }}>${booking.price_paid}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#34d399', fontWeight: '600' }}>₹{Number(booking.price_paid).toLocaleString('en-IN')}</span>
         </div>
         <div style={{ color: 'rgba(148,163,184,0.5)', fontSize: '0.8rem', marginTop: '0.4rem' }}>
           Booking #{booking.id} · Booked on {bookedOn}

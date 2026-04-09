@@ -239,7 +239,7 @@ const AdminDashboard = () => {
               </div>
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Price ($)</label>
+                  <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Price (₹)</label>
                   <input type="number" step="0.01" name="price" className="form-input" value={formData.price} onChange={handleInputChange} required />
                 </div>
                 <div style={{ flex: 1 }}>
@@ -284,7 +284,7 @@ const AdminDashboard = () => {
                           <strong style={{ display: 'block', color: 'var(--primary)', marginBottom: '0.2rem' }}>{pkg.title}</strong>
                           <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{pkg.description}</div>
                         </td>
-                        <td style={{ padding: '1rem', textAlign: 'center' }}>${pkg.price}</td>
+                        <td style={{ padding: '1rem', textAlign: 'center' }}>₹{Number(pkg.price).toLocaleString('en-IN')}</td>
                         <td style={{ padding: '1rem', textAlign: 'center' }}>{pkg.duration}m</td>
                         <td style={{ padding: '1rem', textAlign: 'right' }}>
                           <button onClick={() => handleEditPackage(pkg)} className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', marginRight: '0.5rem', borderColor: 'var(--primary)', color: 'var(--primary)' }}>Edit</button>
@@ -373,7 +373,7 @@ const AdminDashboard = () => {
                 { label: 'Total Bookings', value: bookingStats.total, color: '#a5b4fc' },
                 { label: 'Upcoming', value: bookingStats.upcoming, color: '#6366f1' },
                 { label: 'Completed', value: bookingStats.completed, color: '#34d399' },
-                { label: 'Total Revenue', value: `$${bookingStats.revenue}`, color: '#fbbf24' },
+                { label: 'Total Revenue', value: `₹${Number(bookingStats.revenue).toLocaleString('en-IN')}`, color: '#fbbf24' },
                 { label: 'Last 24h', value: bookingStats.recent24h, color: '#f97316' },
               ].map(s => (
                 <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '1.1rem 1.25rem' }}>
@@ -423,7 +423,7 @@ const AdminDashboard = () => {
                             📅 {travelDate}
                           </td>
                           <td style={{ padding: '0.9rem 1rem', textAlign: 'center', color: '#34d399', fontWeight: '700' }}>
-                            ${b.price_paid}
+                            ₹{Number(b.price_paid).toLocaleString('en-IN')}
                           </td>
                           <td style={{ padding: '0.9rem 1rem', textAlign: 'center' }}>
                             <span style={{ background: st.bg, color: st.color, padding: '3px 10px', borderRadius: '999px', fontSize: '0.78rem', fontWeight: '600' }}>

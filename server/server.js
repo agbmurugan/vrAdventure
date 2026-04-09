@@ -5,8 +5,12 @@ import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import dns from "dns";
 
 dotenv.config();
+
+// Force IPv4 for external connections (fixes ESOCKET ENETUNREACH on platforms like Railway/Vercel)
+dns.setDefaultResultOrder('ipv4first');
 
 const { Pool } = pkg;
 
@@ -20,9 +24,13 @@ const pool = new Pool({
 });
 
 const transporter = nodemailer.createTransport({
+    service: 'gmail',
     host: 'smtp.gmail.com',
     port: 465,
     secure: true,
+    pool: true, // Use connection pooling for better performance
+    maxConnections: 5,
+    maxMessages: 100,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
@@ -98,7 +106,7 @@ const sendUserBookingConfirmation = async (userEmail, userName, tourTitle, tourD
                   </tr>
                   <tr>
                     <td style="padding:8px 0;color:#64748b;font-size:0.9rem">Amount Paid</td>
-                    <td style="padding:8px 0;color:#34d399;font-weight:bold;text-align:right;font-size:1.1rem">$${price}</td>
+                    <td style="padding:8px 0;color:#34d399;font-weight:bold;text-align:right;font-size:1.1rem">₹${price}</td>
                   </tr>
                   <tr>
                     <td style="padding:8px 0;color:#64748b;font-size:0.9rem">Status</td>
@@ -174,7 +182,7 @@ const sendAdminBookingNotification = async (adminEmail, userName, userEmail, use
                   </tr>
                   <tr>
                     <td style="padding:7px 0;color:#64748b;font-size:0.9rem">Amount</td>
-                    <td style="padding:7px 0;color:#34d399;font-weight:bold;text-align:right;font-size:1.1rem">$${price}</td>
+                    <td style="padding:7px 0;color:#34d399;font-weight:bold;text-align:right;font-size:1.1rem">₹${price}</td>
                   </tr>
                   <tr>
                     <td style="padding:7px 0;color:#64748b;font-size:0.9rem">Booked On</td>
@@ -249,9 +257,9 @@ const initDB = async () => {
         if (parseInt(resTours.rows[0].count, 10) === 0) {
             await pool.query(`
                 INSERT INTO tour_packages (title, description, price, duration, image_url) VALUES 
-                ('Bora Bora Overwater Bungalows', 'Experience paradise in 360° — float above turquoise lagoons in luxury overwater villas.', 1200.00, 60, 'https://images.unsplash.com/photo-1483683804023-6ccdb62f86ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'),
-                ('Swiss Alps Ski Resort', 'Virtual skiing on pristine powder — glide down legendary slopes with breathtaking alpine panoramas.', 850.00, 45, 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'),
-                ('Kyoto Ancient Temples', 'Walk through centuries of Japanese culture — cherry blossoms, zen gardens, and tranquil shrines await.', 920.00, 120, 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80');
+                ('Bora Bora Overwater Bungalows', 'Experience paradise in 360° — float above turquoise lagoons in luxury overwater villas.', 95000.00, 60, 'https://images.unsplash.com/photo-1483683804023-6ccdb62f86ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'),
+                ('Swiss Alps Ski Resort', 'Virtual skiing on pristine powder — glide down legendary slopes with breathtaking alpine panoramas.', 72000.00, 45, 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'),
+                ('Kyoto Ancient Temples', 'Walk through centuries of Japanese culture — cherry blossoms, zen gardens, and tranquil shrines await.', 68000.00, 120, 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80');
             `);
             console.log("Seeded tour_packages with default data.");
         } else {
